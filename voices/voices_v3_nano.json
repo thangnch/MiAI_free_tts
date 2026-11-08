@@ -1,0 +1,126 @@
+{
+ "default_voice": "Minh Quân",
+ "voices": [
+  {
+   "name": "Adam",
+   "description": "Nam · Nam · Giọng đọc tự nhiên",
+   "gender": "male",
+   "offset": 0,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Ái Hân",
+   "description": "Nữ · Nam · Phong cách tin tức",
+   "gender": "female",
+   "offset": 12992,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Mỹ Duyên",
+   "description": "Nữ · Bắc · Phong cách đọc truyện",
+   "gender": "female",
+   "offset": 25984,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Đức Trí",
+   "description": "Nam · Bắc · Phong cách đọc truyện",
+   "gender": "male",
+   "offset": 38976,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Hữu Quân",
+   "description": "Nam · Bắc · Phong cách tin tức",
+   "gender": "male",
+   "offset": 51968,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Xuân Tiên",
+   "description": "Nữ · Bắc · Phong cách tin tức",
+   "gender": "female",
+   "offset": 64960,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Mai Anh",
+   "description": "Nữ · Bắc · Phong cách tin tức",
+   "gender": "female",
+   "offset": 77952,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Trúc Ly",
+   "description": "Nữ · Bắc · Phong cách tự nhiên",
+   "gender": "female",
+   "offset": 90944,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Anh Khôi",
+   "description": "Nam · Bắc · Phong cách kể chuyện",
+   "gender": "male",
+   "offset": 103936,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Minh Quân",
+   "description": "Nam · Bắc · Phong cách tự nhiên",
+   "gender": "male",
+   "offset": 116928,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  },
+  {
+   "name": "Mạnh Dũng",
+   "description": "Nam · Bắc · Phong cách tự nhiên",
+   "gender": "male",
+   "offset": 129920,
+   "spk": 192,
+   "style": [
+    50,
+    256
+   ]
+  }
+ ]
+}

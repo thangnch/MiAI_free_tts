@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đọc văn bản · AI Tools by Mi AI</title>
+<style>
+  :root {
+    --orange: #d45a17; --orange-dark: #b84a10; --orange-soft: #fdf0e7;
+    --ink: #1a1a2e; --text: #3c3f4a; --muted: #8a8f9c; --line: #e3e5ea;
+    --green: #2f9e44; --green-soft: #ebf8ee; --amber: #b7791f; --amber-soft: #fdf6e7;
+    --red: #c92a2a; --red-soft: #fdecec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text);
+    font: 16px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #f8f5ef 0%, #faf7f1 55%, #f3f3f4 100%);
+  }
+
+  /* ── top bar ── */
+  .topbar {
+    height: 64px; padding: 0 28px; background: #fff; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.03);
+  }
+  .brand { font-weight: 800; font-size: 20px; color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+  .brand span { color: var(--orange); }
+  .nav { display: flex; align-items: center; gap: 24px; }
+  .nav a { color: var(--text); text-decoration: none; font-size: 15px; }
+  .nav a:hover { color: var(--orange); }
+
+  /* ── page ── */
+  main { max-width: 820px; margin: 0 auto; padding: 56px 20px 72px; }
+  h1 { margin: 0 0 8px; font-size: 34px; line-height: 1.2; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+  .lead { margin: 0 0 32px; color: #5b5f6b; font-size: 16px; }
+
+  .card { background: #fff; border-radius: 18px; padding: 28px; box-shadow: 0 4px 24px rgba(26,26,46,.06); }
+
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 14px;
+    background: var(--amber-soft); color: var(--amber);
+  }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+  #status[data-kind="ok"] { background: var(--green-soft); color: var(--green); }
+  #status[data-kind="err"] { background: var(--red-soft); color: var(--red); }
+  #ep { background: #f1f2f5; color: var(--muted); }
+  #ep[data-kind="webgpu"] { background: var(--orange-soft); color: var(--orange); }
+
+  .field { margin-bottom: 20px; }
+  label { display: block; font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 8px; }
+  label .val { font-weight: 500; color: var(--orange); margin-left: 4px; }
+  .help { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  textarea, select, input[type=number] {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    color: var(--ink); font: inherit; transition: border-color .15s, box-shadow .15s;
+  }
+  textarea { min-height: 140px; resize: vertical; line-height: 1.6; }
+  textarea:focus, select:focus, input[type=number]:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(212,90,23,.12); }
+  textarea::placeholder, input::placeholder { color: #a3a7b1; }
+
+  .cues { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+  .cues button { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; }
+  .cues button:hover { border-color: var(--orange); color: var(--orange); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 28px; } .card { padding: 20px; } }
+  input[type=range] { width: 100%; accent-color: var(--orange); margin: 10px 0 0; }
+  .checks { display: flex; gap: 24px; flex-wrap: wrap; margin: 4px 0 24px; }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 15px; color: var(--text); margin: 0; cursor: pointer; }
+  .check input { width: 17px; height: 17px; accent-color: var(--orange); }
+
+  .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--orange); color: #fff; border: 0; border-radius: 10px; padding: 15px 30px;
+    font-family: inherit; font-weight: 700; font-size: 17px; line-height: 1; cursor: pointer; transition: background .15s;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--orange-dark); }
+  .btn-outline {
+    background: #fff; color: var(--orange); border: 1.5px solid var(--orange); border-radius: 10px; padding: 14px 22px;
+    font-family: inherit; font-weight: 600; font-size: 16px; line-height: 1; cursor: pointer;
+  }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .hint { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+  .progress { height: 4px; background: #f0f1f4; border-radius: 4px; overflow: hidden; margin-top: 22px; }
+  #bar { height: 100%; width: 0; background: var(--orange); transition: width .2s; }
+
+  #result { margin-top: 22px; padding: 18px; border-radius: 12px; background: #faf8f5; border: 1px solid #f0ebe3; }
+  #result audio { width: 100%; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  #stats { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dl { color: var(--orange); font-weight: 600; text-decoration: none; }
+  .dl:hover { text-decoration: underline; }
+
+  footer { margin-top: 24px; font-size: 13px; color: var(--muted); }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">AI Tools by <span>Mi AI</span></a>
+  <nav class="nav"><a href="/">← Trang chủ</a></nav>
+</header>
+
+<main>
+  <h1>🔊 Đọc văn bản</h1>
+  <p class="lead">Chuyển văn bản tiếng Việt thành giọng nói bằng VieNeu-TTS Nano, chạy ngay trên trình duyệt của bạn.</p>
+
+  <section class="card">
+    <div class="pills">
+      <span class="pill" id="status">Đang khởi động…</span>
+      <span class="pill" id="ep">Đang kiểm tra GPU…</span>
+    </div>
+
+    <div class="field">
+      <label for="text">Văn bản cần đọc</label>
+      <textarea id="text" spellcheck="false" placeholder="Nhập hoặc dán văn bản tiếng Việt…">Chào mừng các bạn đến với công cụ Đọc văn bản của Mì AI</textarea>
+      <div class="cues">Chèn âm thanh cảm xúc (thử nghiệm):
+        <button type="button" data-cue=" [cười]">[cười]</button>
+        <button type="button" data-cue=" [thở dài]">[thở dài]</button>
+        <button type="button" data-cue=" [hắng giọng]">[hắng giọng]</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label for="voice">Giọng đọc</label>
+        <select id="voice"></select>
+      </div>
+      <div class="field">
+        <label for="seed">Seed</label>
+        <input id="seed" type="number" placeholder="Để trống để ngẫu nhiên">
+        <div class="help">Cùng seed sẽ cho cùng một kết quả.</div>
+      </div>
+      <div class="field">
+        <label for="speed">Tốc độ <span class="val" id="speedv">1.00×</span></label>
+        <input id="speed" type="range" min="0.6" max="1.5" step="0.05" value="1">
+      </div>
+      <div class="field">
+        <label for="cfg">Độ bám văn bản (CFG) <span class="val" id="cfgv">3.0</span></label>
+        <input id="cfg" type="range" min="0" max="5" step="0.5" value="3">
+        <div class="help">Mặc định 3. Cao hơn rõ chữ hơn nhưng dễ gắt giọng.</div>
+      </div>
+    </div>
+
+    <div class="checks">
+      <label class="check"><input id="fast" type="checkbox"> Chế độ nhanh (8 bước)</label>
+      <label class="check"><input id="stream" type="checkbox" checked> Phát ngay từng đoạn</label>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="go" disabled>Đọc văn bản →</button>
+      <button class="btn-outline" id="stop" disabled>Dừng</button>
+      <span class="hint">Ctrl + Enter</span>
+    </div>
+
+    <div class="progress"><div id="bar"></div></div>
+
+    <div id="result" hidden>
+      <audio id="audio" controls></audio>
+      <div class="row"><span id="stats"></span><a class="dl" id="download" href="#">Tải file WAV ↓</a></div>
+    </div>
+  </section>
+
+  <footer>
+    Model <a href="https://huggingface.co/pnnbao-ump/VieNeu-TTS-v3-Nano" target="_blank" rel="noopener">VieNeu-TTS v3 Nano</a> ·
+    phiên âm <a href="https://github.com/pnnbao97/sea-g2p" target="_blank" rel="noopener">sea-g2p</a> ·
+    văn bản không rời khỏi máy bạn.
+  </footer>
+</main>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

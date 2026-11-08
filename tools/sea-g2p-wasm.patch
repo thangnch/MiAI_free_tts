@@ -1,0 +1,242 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index a59b0e0..b6c8403 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -32,6 +32,12 @@ version = "0.6.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
+ 
++[[package]]
++name = "bumpalo"
++version = "3.20.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
++
+ [[package]]
+ name = "cc"
+ version = "1.2.56"
+@@ -117,6 +123,12 @@ version = "0.2.183"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
+ 
++[[package]]
++name = "log"
++version = "0.4.35"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
++
+ [[package]]
+ name = "memchr"
+ version = "2.8.0"
+@@ -311,6 +323,7 @@ dependencies = [
+  "rayon",
+  "regex",
+  "unicode-normalization",
++ "wasm-bindgen",
+ ]
+ 
+ [[package]]
+@@ -371,3 +384,61 @@ name = "unindent"
+ version = "0.2.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "7264e107f553ccae879d21fbea1d6724ac785e8c3bfc762137959b5802826ef3"
++
++[[package]]
++name = "wasm-bindgen"
++version = "0.2.100"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1edc8929d7499fc4e8f0be2262a241556cfc54a0bea223790e71446f2aab1ef5"
++dependencies = [
++ "cfg-if",
++ "once_cell",
++ "rustversion",
++ "wasm-bindgen-macro",
++]
++
++[[package]]
++name = "wasm-bindgen-backend"
++version = "0.2.100"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2f0a0651a5c2bc21487bde11ee802ccaf4c51935d0d3d42a6101f98161700bc6"
++dependencies = [
++ "bumpalo",
++ "log",
++ "proc-macro2",
++ "quote",
++ "syn",
++ "wasm-bindgen-shared",
++]
++
++[[package]]
++name = "wasm-bindgen-macro"
++version = "0.2.100"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7fe63fc6d09ed3792bd0897b314f53de8e16568c2b3f7982f468c0bf9bd0b407"
++dependencies = [
++ "quote",
++ "wasm-bindgen-macro-support",
++]
++
++[[package]]
++name = "wasm-bindgen-macro-support"
++version = "0.2.100"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8ae87ea40c9f689fc23f209965b6fb8a99ad69aeeb0231408be24920604395de"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn",
++ "wasm-bindgen-backend",
++ "wasm-bindgen-shared",
++]
++
++[[package]]
++name = "wasm-bindgen-shared"
++version = "0.2.100"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1a05d73b933a847d6cccdda8f838a22ff101ad9bf93e33684f39c1f5f0eece3d"
++dependencies = [
++ "unicode-ident",
++]
+diff --git a/Cargo.toml b/Cargo.toml
+index dc21c20..fa47c3a 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -15,15 +15,26 @@ python = ["dep:pyo3", "dep:pyo3-build-config"]
+ # PyO3 entirely so the library has no Python runtime to find:
+ #   cargo build --release --no-default-features --features capi
+ capi = []
++wasm = ["dep:wasm-bindgen"]
+ 
+ [dependencies]
+ pyo3 = { version = "0.23", features = ["extension-module", "abi3-py310", "generate-import-lib"], optional = true }
+ regex = "1.10"
+ fancy-regex = "0.13"
+ once_cell = "1.19"
++unicode-normalization = "0.1"
++
++wasm-bindgen = { version = "=0.2.100", optional = true }
++
++[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ memmap2 = "0.9"
+ rayon = "1.10"
+-unicode-normalization = "0.1"
+ 
+ [build-dependencies]
+ pyo3-build-config = { version = "0.23", optional = true }
++
++[profile.release]
++opt-level = "s"
++lto = true
++codegen-units = 1
++panic = "abort"
+diff --git a/src/core/dict.rs b/src/core/dict.rs
+index c5f43fd..5da5718 100644
+--- a/src/core/dict.rs
++++ b/src/core/dict.rs
+@@ -16,10 +16,20 @@
+ //!
+ //! The mmap is never modified; `scripts/seap.py` is the writer.
+ 
++#[cfg(not(target_arch = "wasm32"))]
+ use memmap2::Mmap;
++#[cfg(not(target_arch = "wasm32"))]
+ use std::fs::File;
+ use std::io;
+ 
++#[cfg(target_arch = "wasm32")]
++type Mmap = std::sync::Arc<[u8]>;
++
++/// On wasm there is no filesystem: the host hands the dictionary bytes over
++/// once (see `wasm.rs`) and every `PhonemeDict::new` shares them.
++#[cfg(target_arch = "wasm32")]
++pub static WASM_DICT: std::sync::OnceLock<std::sync::Arc<[u8]>> = std::sync::OnceLock::new();
++
+ /// Section kinds for version-2 language tables.
+ pub const SECTION_TH: u32 = 3;
+ /// Thai word frequencies (value is the count as a decimal string). Feeds the
+@@ -47,8 +57,10 @@ pub struct PhonemeDict {
+ 
+ impl PhonemeDict {
+     pub fn new(path: &str) -> io::Result<Self> {
+-        let file = File::open(path)?;
+-        let mmap = unsafe { Mmap::map(&file)? };
++        #[cfg(not(target_arch = "wasm32"))]
++        let mmap = { let file = File::open(path)?; unsafe { Mmap::map(&file)? } };
++        #[cfg(target_arch = "wasm32")]
++        let mmap: Mmap = { let _ = path; WASM_DICT.get().cloned().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "dictionary bytes not loaded"))? };
+ 
+         if mmap.len() < 32 || &mmap[0..4] != b"SEAP" {
+             return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid dictionary format"));
+diff --git a/src/lang/vi/mod.rs b/src/lang/vi/mod.rs
+index 828d454..1af4846 100644
+--- a/src/lang/vi/mod.rs
++++ b/src/lang/vi/mod.rs
+@@ -1127,8 +1127,11 @@ impl Normalizer {
+ 
+     /// Many texts at once, in parallel.
+     pub fn normalize_all(&self, texts: Vec<String>, punc_norm: bool) -> Vec<String> {
+-        use rayon::prelude::*;
+-        texts.into_par_iter().map(|t| self.normalize(&t, punc_norm)).collect()
++        #[cfg(not(target_arch = "wasm32"))]
++        { use rayon::prelude::*;
++        return texts.into_par_iter().map(|t| self.normalize(&t, punc_norm)).collect(); }
++        #[cfg(target_arch = "wasm32")]
++        { texts.into_iter().map(|t| self.normalize(&t, punc_norm)).collect() }
+     }
+ }
+ 
+diff --git a/src/lib.rs b/src/lib.rs
+index eb4564f..4374e8d 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -31,6 +31,8 @@ use pyo3::wrap_pyfunction;
+ 
+ #[cfg(feature = "capi")]
+ pub mod capi;
++#[cfg(feature = "wasm")]
++pub mod wasm;
+ pub mod core;
+ pub mod g2p;
+ pub mod lang;
+diff --git a/src/wasm.rs b/src/wasm.rs
+new file mode 100644
+index 0000000..b84e26f
+--- /dev/null
++++ b/src/wasm.rs
+@@ -0,0 +1,35 @@
++//! wasm-bindgen front end for browsers: the same normalize + G2P pipeline as
++//! the Python `SEAPipeline(lang="vi")`, with the dictionary passed in as bytes.
++use wasm_bindgen::prelude::*;
++use crate::g2p::G2PEngine;
++use crate::lang::vi::Normalizer;
++
++#[wasm_bindgen]
++pub struct SeaG2p { normalizer: Normalizer, engine: G2PEngine }
++
++#[wasm_bindgen]
++impl SeaG2p {
++    /// `dict` = contents of sea_g2p.bin. Only the first call's bytes are kept.
++    #[wasm_bindgen(constructor)]
++    pub fn new(dict: Vec<u8>) -> Result<SeaG2p, JsError> {
++        let _ = crate::core::dict::WASM_DICT.set(std::sync::Arc::from(dict.into_boxed_slice()));
++        let engine = G2PEngine::new("sea_g2p.bin").map_err(|e| JsError::new(&e.to_string()))?;
++        Ok(SeaG2p { normalizer: Normalizer::new("vi", Some("sea_g2p.bin")), engine })
++    }
++    /// Normalisation only (what the chunker measures).
++    pub fn normalize(&self, text: &str, punc_norm: bool) -> String {
++        if text.is_empty() { return String::new(); }
++        self.normalizer.normalize(text, punc_norm)
++    }
++    /// normalize + G2P  ==  SEAPipeline("vi").run(text, punc_norm)
++    pub fn phonemize(&self, text: &str, punc_norm: bool) -> String {
++        if text.is_empty() { return String::new(); }
++        let n = self.normalizer.normalize(text, punc_norm);
++        self.engine.phonemize(&n)
++    }
++    /// G2P on already-normalized text.
++    pub fn g2p(&self, text: &str) -> String { self.engine.phonemize(text) }
++}
++
++#[wasm_bindgen(js_name = puncNorm)]
++pub fn punc_norm(text: &str) -> String { crate::punc::apply_punc_norm(text) }
