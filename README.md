@@ -2,12 +2,6 @@
 
 Trang tĩnh, toàn bộ xử lý chạy **trên máy người dùng**: chuẩn hoá văn bản + phiên âm (sea-g2p biên dịch sang WebAssembly) và 4 model ONNX của Nano (onnxruntime-web, WebGPU; tự lùi về CPU/WASM nếu trình duyệt không có WebGPU). Server chỉ phát file tĩnh, không tốn CPU/GPU.
 
-Tương đương đoạn Python:
-
-```python
-tts = Vieneu(mode="v3nano")
-audio = tts.infer(text, voice="Mạnh Dũng", speed=0.8)
-```
 
 ## Chạy thử
 
@@ -62,20 +56,6 @@ voices/             11 giọng preset của Nano (từ vieneu/assets/voices_v3_n
 tools/              patch + script build lại g2p/
 ```
 
-## Đã kiểm chứng
-
-- Phiên âm WASM so với `sea_g2p` Python: giống hệt từng ký tự (cả số, ngày tháng, URL, tiếng Anh xen kẽ, emotion cue).
-- Chia đoạn + khoảng nghỉ so với `vieneu_utils`: giống hệt trên 8 văn bản mẫu.
-- Toàn bộ pipeline JS so với `OnnxV3NanoEngine` Python (cùng noise, model giả lập cùng chữ ký input): 24/24 trường hợp, sai số tối đa 3,6·10⁻⁷.
-- Chạy end-to-end trong Chrome headless ở cả WebGPU và WASM.
-
-Chưa kiểm chứng với file model Nano thật (không tải được từ môi trường build). Nếu một op nào đó chưa có kernel WebGPU, onnxruntime tự chạy op đó trên CPU; nếu tạo session WebGPU lỗi hẳn, trang tự chuyển sang WASM.
-
-## Khác biệt so với bản Python
-
-- Noise ngẫu nhiên dùng bộ sinh riêng (mulberry32 + Box–Muller), nên cùng `seed` vẫn cho kết quả khác Python, nhưng lặp lại được trên web.
-- Không có watermark Perth (bản Python cũng tắt nếu chưa cài `resemble-perth`).
-- Chưa có clone giọng (Nano cần thêm 3 model encoder), chỉ dùng 11 giọng preset.
 
 ## Build lại `g2p/`
 
